@@ -2,9 +2,11 @@ package com.example.docufy
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,18 +51,18 @@ class MainActivity : ComponentActivity() {
                         mutableStateListOf<Uri>()
                     }
                     val scannerLauncher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.StartActivityForResult(),
+                        contract = ActivityResultContracts.StartIntentSenderForResult(),
                         onResult = {
 
                         }
                     )
-                    Column (
+                    Column(
                         modifier = Modifier
                             .fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        imageUris.forEach {uri ->
+                        imageUris.forEach { uri ->
                             AsyncImage(
                                 model = uri,
                                 contentDescription = null,
@@ -68,8 +70,20 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-                        Button(onClick = { /*TODO*/
-
+                        Button(onClick = {
+                            scanner.getStartScanIntent(this@MainActivity)
+                                .addOnSuccessListener {
+                                    scannerLauncher.launch(
+                                        IntentSenderRequest.Builder(it).build()
+                                    )
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(
+                                        applicationContext,
+                                        it.message,
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                         }) {
                             Text(text = "Scan it out")
                         }
