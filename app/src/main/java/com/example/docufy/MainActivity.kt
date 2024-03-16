@@ -11,12 +11,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -27,6 +31,9 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_PDF
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,21 +59,33 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // Remember a mutable list to store scanned document URIs
-                    val imageUris = remember {
-                        mutableStateListOf<Uri>()
+                    var imageUris by remember {
+                        mutableStateOf<List<Uri>>(emptyList())
                     }
                     // Create an ActivityResultLauncher to handle the scan results
                     val scannerLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.StartIntentSenderForResult(),
-                        onResult = {
+                        onResult = { it ->
+                            if (it.resultCode == RESULT_OK) {
+                                val result =
+                                    GmsDocumentScanningResult.fromActivityResultIntent(it.data)
+                                imageUris = result?.pages?.map { it.imageUri } ?: emptyList()
 
+                                result?.pdf?.let { pdf ->
+                                    val fos = FileOutputStream(File(filesDir, "scan.pdf"))
+                                    contentResolver.openInputStream(pdf.uri)?.use {
+                                        it.copyTo(fos)
+                                    }
+                                }
+                            }
                         }
                     )
 
                     // Column layout to arrange elements vertically
                     Column(
                         modifier = Modifier
-                            .fillMaxSize(),
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -104,20 +123,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    DocufyTheme {
-//        Greeting("Android")
-//    }
-//}
